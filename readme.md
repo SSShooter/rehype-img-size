@@ -1,4 +1,4 @@
-# rehype-img-size
+# unist-util-visit doesn't allow async
 
 [![main](https://github.com/ksoichiro/rehype-img-size/actions/workflows/main.yaml/badge.svg?branch=master)](https://github.com/ksoichiro/rehype-img-size/actions/workflows/main.yaml)
 [![codecov](https://codecov.io/gh/ksoichiro/rehype-img-size/branch/master/graph/badge.svg?token=71EXFOOV6T)](https://codecov.io/gh/ksoichiro/rehype-img-size)

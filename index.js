@@ -2,6 +2,7 @@ import path from "path";
 import { visit } from "unist-util-visit";
 import sizeOf from "image-size";
 import http from "http";
+import https from "https";
 
 export default setImageSize;
 
@@ -16,7 +17,8 @@ const absolutePathRegex = /^(?:[a-z]+:)?\/\//;
 
 const getRemoteImage = (src) => {
   return new Promise((resolve, reject) => {
-    http
+    const req = src.startsWith("https") ? https : http;
+    req
       .get(src, (response) => {
         const chunks = [];
         response.on("data", (chunk) => {
@@ -56,17 +58,14 @@ function getImageSize(src, opts) {
 
 function setImageSize(options) {
   const opts = options || {};
-  return transformer;
-
-  function transformer(tree, file) {
-    visit(tree, "element", visitor);
-    function visitor(node) {
+  return async function transformer(tree) {
+    visit(tree, "element", async function visitor(node) {
       if (node.tagName === "img") {
         const src = node.properties.src;
-        const dimensions = getImageSize(src, opts) || {};
-        node.properties.width = dimensions.width;
-        node.properties.height = dimensions.height;
+        const dimensions = (await getImageSize(src, opts)) || {};
+        node.properties.width = dimensions.width || 200;
+        node.properties.height = dimensions.height || 200;
       }
-    }
-  }
+    });
+  };
 }
