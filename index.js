@@ -1,8 +1,9 @@
-import path from 'path'
-import {visit} from 'unist-util-visit'
-import sizeOf from 'image-size'
+import path from "path";
+import { visit } from "unist-util-visit";
+import sizeOf from "image-size";
+import http from "http";
 
-export default setImageSize
+export default setImageSize;
 
 /**
  * Handles:
@@ -13,32 +14,58 @@ export default setImageSize
  */
 const absolutePathRegex = /^(?:[a-z]+:)?\/\//;
 
-function getImageSize(src, dir) {
-  if (absolutePathRegex.exec(src)) {
-    return
+const getRemoteImage = (src) => {
+  return new Promise((resolve, reject) => {
+    http
+      .get(src, (response) => {
+        const chunks = [];
+        response.on("data", (chunk) => {
+          chunks.push(chunk);
+        });
+        response.on("end", () => {
+          const buffer = Buffer.concat(chunks);
+          resolve(buffer);
+        });
+      })
+      .on("error", (error) => {
+        reject(error);
+      });
+  });
+};
+
+function getImageSize(src, opts) {
+  const dir = opts.dir;
+  const useRemoteImage = opts.useRemoteImage === false ? false : true;
+  if (absolutePathRegex.exec(src) && useRemoteImage) {
+    return getRemoteImage(src)
+      .then((buffer) => {
+        return sizeOf(buffer);
+      })
+      .catch((error) => {
+        console.error(`Error fetching remote image: ${error.message}`);
+      });
   }
   // Treat `/` as a relative path, according to the server
-  const shouldJoin = !path.isAbsolute(src) || src.startsWith('/');
+  const shouldJoin = !path.isAbsolute(src) || src.startsWith("/");
 
   if (dir && shouldJoin) {
     src = path.join(dir, src);
   }
-  return sizeOf(src)
+  return sizeOf(src);
 }
 
 function setImageSize(options) {
-  const opts = options || {}
-  const dir = opts.dir
-  return transformer
+  const opts = options || {};
+  return transformer;
 
   function transformer(tree, file) {
-    visit(tree, 'element', visitor)
+    visit(tree, "element", visitor);
     function visitor(node) {
-      if (node.tagName === 'img') {
-        const src = node.properties.src
-        const dimensions = getImageSize(src, dir) || {};
-        node.properties.width = dimensions.width
-        node.properties.height = dimensions.height
+      if (node.tagName === "img") {
+        const src = node.properties.src;
+        const dimensions = getImageSize(src, opts) || {};
+        node.properties.width = dimensions.width;
+        node.properties.height = dimensions.height;
       }
     }
   }
